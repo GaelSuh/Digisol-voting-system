@@ -1,6 +1,7 @@
 /* src/App.tsx */
 import { useState, type FormEvent } from "react";
 import "./App.css";
+import digisolLogo from "./assets/DIGISOL LOGO.jpg";
 
 // 1. Categories from your image
 const categories = [
@@ -62,7 +63,7 @@ function App() {
     setIsLoading(true);
     
     try {
-      const response = await fetch("http://localhost:5000/api/vote", {
+      const response = await fetch("https://voting-system-backend-k32s.onrender.com/api/vote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userName, votes }),
@@ -85,6 +86,17 @@ function App() {
     return (
       <div className="form-container">
         <div className="success-card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+            <img 
+              src={digisolLogo} 
+              alt="Digisol Logo" 
+              style={{ 
+                height: '60px', 
+                width: 'auto', 
+                objectFit: 'contain'
+              }} 
+            />
+          </div>
           <h1 className="header-title">Vote Received!</h1>
           <p className="header-desc">
             Thanks, {userName}. Your nominations have been secured.
@@ -99,6 +111,17 @@ function App() {
       <form onSubmit={handleSubmit}>
         {/* Header */}
         <div className="header-card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+            <img 
+              src={digisolLogo} 
+              alt="Digisol Logo" 
+              style={{ 
+                height: '60px', 
+                width: 'auto', 
+                objectFit: 'contain'
+              }} 
+            />
+          </div>
           <h1 className="header-title">Quarterly Voting</h1>
           <p className="header-desc">
             Please cast your nominations for Sept, Oct, and Nov below.

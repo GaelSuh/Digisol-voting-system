@@ -1,10 +1,7 @@
 /* src/AdminPanel.tsx */
 import { useEffect, useState } from "react";
 import "./App.css"; // Reuse the same styling
-
-
-
-
+import digisolLogo from "./assets/DIGISOL LOGO.jpg";
 
 interface Winner {
   nominee: string;
@@ -32,8 +29,8 @@ export default function AdminPanel() {
 
   useEffect(() => {
     Promise.all([
-      fetch("http://localhost:5000/api/votes/summary").then(res => res.json()),
-      fetch("http://localhost:5000/api/votes").then(res => res.json())
+      fetch("https://voting-system-backend-k32s.onrender.com/api/votes/summary").then(res => res.json()),
+      fetch("https://voting-system-backend-k32s.onrender.com/api/votes").then(res => res.json())
     ])
       .then(([detailedData, votesData]) => {
         setTotalVotes(votesData.count);
@@ -160,6 +157,17 @@ export default function AdminPanel() {
   return (
     <div className="form-container" style={{ maxWidth: "900px" }}>
       <div className="header-card">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+          <img 
+            src={digisolLogo} 
+            alt="Digisol Logo" 
+            style={{ 
+              height: '60px', 
+              width: 'auto', 
+              objectFit: 'contain'
+            }} 
+          />
+        </div>
         <h1 className="header-title">Voting Results Dashboard</h1>
         <p className="header-desc">
           Winner reports showing monthly and overall champions. Total submissions: {totalVotes}
