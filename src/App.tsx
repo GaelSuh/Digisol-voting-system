@@ -2,6 +2,7 @@
 import { useState, type FormEvent } from "react";
 import "./App.css";
 import digisolLogo from "./assets/DIGISOL LOGO.jpg";
+import ErrorModal from "./components/ErrorModal";
 
 // 1. Categories from your image
 const categories = [
@@ -41,6 +42,7 @@ function App() {
   const [focusedCard, setFocusedCard] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<{ title: string; message: string } | null>(null);
 
   const handleVoteChange = (category: string, month: string, value: string) => {
     setVotes((prev) => ({
@@ -72,11 +74,18 @@ function App() {
       if (response.ok) {
         setSubmitted(true);
       } else {
-        alert("Failed to submit vote. Please try again.");
+        const errorData = await response.json().catch(() => ({}));
+        setError({
+          title: "Failed to Submit Vote",
+          message: errorData.message || "There was an issue submitting your vote. Please check your selections and try again."
+        });
       }
     } catch (error) {
       console.error("Network error:", error);
-      alert("Could not connect to server.");
+      setError({
+        title: "Connection Error",
+        message: "Could not connect to the server. Please check your internet connection and try again."
+      });
     } finally {
       setIsLoading(false);
     }
@@ -262,6 +271,18 @@ function App() {
           }
         `}</style>
       </form>
+      
+      {/* Error Modal */}
+      <ErrorModal
+        isOpen={!!error}
+        onClose={() => setError(null)}
+        title={error?.title}
+        message={error?.message || ""}
+        onRetry={() => {
+          setError(null);
+          handleSubmit({ preventDefault: () => {} } as FormEvent);
+        }}
+      />
     </div>
   );
 }

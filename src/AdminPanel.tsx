@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import "./App.css"; // Reuse the same styling
 import digisolLogo from "./assets/DIGISOL LOGO.jpg";
+import ErrorModal from "./components/ErrorModal";
 
 interface Winner {
   nominee: string;
@@ -25,65 +26,148 @@ export default function AdminPanel() {
   const [winnerReport, setWinnerReport] = useState<WinnerReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [totalVotes, setTotalVotes] = useState(0);
+  const [error, setError] = useState<{ title: string; message: string } | null>(null);
 
 
-  useEffect(() => {
-    Promise.all([
-      fetch("https://voting-system-backend-k32s.onrender.com/api/votes/summary").then(res => res.json()),
-      fetch("https://voting-system-backend-k32s.onrender.com/api/votes").then(res => res.json())
-    ])
-      .then(([detailedData, votesData]) => {
-        setTotalVotes(votesData.count);
-        
-        // Calculate winners
-        const winners: WinnerReport = {};
-        
-        Object.keys(detailedData.categories).forEach(category => {
-        winners[category] = {
-          monthly: {},
-          overall: []
-        };          // Calculate monthly winners (top 2)
-          detailedData.months.forEach((month: string) => {
-            const monthVotes = Object.entries(detailedData.categories[category][month])
-              .map(([nominee, votes]) => ({ nominee, votes: votes as number }))
-              .filter(item => item.votes > 0)
-              .sort((a, b) => b.votes - a.votes)
-              .slice(0, 2)
-              .map((item, index) => ({ ...item, rank: index + 1 }));
-            
-            winners[category].monthly[month] = monthVotes;
-          });
-          
-          let overallCounts: { [nominee: string]: number } = {};
-          detailedData.months.forEach((month: string) => {
-            Object.entries(detailedData.categories[category][month]).forEach(([nominee, votes]) => {
-              const voteCount = votes as number;
-              if (voteCount > 0) {
-                overallCounts[nominee] = (overallCounts[nominee] || 0) + voteCount;
-              }
-            });
-          });
-          
-          const overallWinners = Object.entries(overallCounts)
-            .map(([nominee, votes]) => ({ nominee, votes }))
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const [summaryResponse, votesResponse] = await Promise.all([
+        fetch("https://voting-system-backend-k32s.onrender.com/api/votes/summary"),
+        fetch("https://voting-system-backend-k32s.onrender.com/api/votes")
+      ]);
+      
+      if (!summaryResponse.ok || !votesResponse.ok) {
+        throw new Error('Failed to fetch data from server');
+      }
+      
+      const [detailedData, votesData] = await Promise.all([
+        summaryResponse.json(),
+        votesResponse.json()
+      ]);
+      setTotalVotes(votesData.count);
+      
+      // Calculate winners
+      const winners: WinnerReport = {};
+      
+      Object.keys(detailedData.categories).forEach(category => {
+      winners[category] = {
+        monthly: {},
+        overall: []
+      };          // Calculate monthly winners (top 2)
+        detailedData.months.forEach((month: string) => {
+          const monthVotes = Object.entries(detailedData.categories[category][month])
+            .map(([nominee, votes]) => ({ nominee, votes: votes as number }))
+            .filter(item => item.votes > 0)
             .sort((a, b) => b.votes - a.votes)
             .slice(0, 2)
             .map((item, index) => ({ ...item, rank: index + 1 }));
           
-          winners[category].overall = overallWinners;
+          winners[category].monthly[month] = monthVotes;
         });
         
-        setWinnerReport(winners);
-        console.log('Winner report:', winners);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('Error fetching data:', err);
-        setLoading(false);
+        let overallCounts: { [nominee: string]: number } = {};
+        detailedData.months.forEach((month: string) => {
+          Object.entries(detailedData.categories[category][month]).forEach(([nominee, votes]) => {
+            const voteCount = votes as number;
+            if (voteCount > 0) {
+              overallCounts[nominee] = (overallCounts[nominee] || 0) + voteCount;
+            }
+          });
+        });
+        
+        const overallWinners = Object.entries(overallCounts)
+          .map(([nominee, votes]) => ({ nominee, votes }))
+          .sort((a, b) => b.votes - a.votes)
+          .slice(0, 2)
+          .map((item, index) => ({ ...item, rank: index + 1 }));
+        
+        winners[category].overall = overallWinners;
       });
+      
+      setWinnerReport(winners);
+      console.log('Winner report:', winners);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError({
+        title: "Failed to Load Results",
+        message: "Could not load the voting results. Please check your internet connection and try again."
+      });
+      setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    fetchData();
   }, []);
 
-  if (loading) return <div className="form-container">Loading results...</div>;
+  if (loading) return (
+    <div className="form-container">
+      <div className="header-card">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+          <img 
+            src={digisolLogo} 
+            alt="Digisol Logo" 
+            style={{ 
+              height: '60px', 
+              width: 'auto', 
+              objectFit: 'contain'
+            }} 
+          />
+        </div>
+        <h1 className="header-title">Loading Results...</h1>
+        <p className="header-desc">Please wait while we fetch the voting data.</p>
+      </div>
+    </div>
+  );
+  
+  if (error && !winnerReport) {
+    return (
+      <div className="form-container">
+        <div className="header-card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+            <img 
+              src={digisolLogo} 
+              alt="Digisol Logo" 
+              style={{ 
+                height: '60px', 
+                width: 'auto', 
+                objectFit: 'contain'
+              }} 
+            />
+          </div>
+          <h1 className="header-title">Unable to Load Results</h1>
+          <p className="header-desc">There was an issue loading the voting results.</p>
+          <button 
+            onClick={fetchData}
+            style={{
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '12px 24px',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer',
+              marginTop: '16px'
+            }}
+          >
+            Try Again
+          </button>
+        </div>
+        <ErrorModal
+          isOpen={!!error}
+          onClose={() => setError(null)}
+          title={error?.title}
+          message={error?.message || ""}
+          onRetry={fetchData}
+        />
+      </div>
+    );
+  }
 
   const renderWinnersList = (winners: Winner[], isOverall = false) => {
     if (!winners || winners.length === 0) {
@@ -215,6 +299,15 @@ export default function AdminPanel() {
           ))}
         </div>
       )}
+      
+      {/* Error Modal */}
+      <ErrorModal
+        isOpen={!!error}
+        onClose={() => setError(null)}
+        title={error?.title}
+        message={error?.message || ""}
+        onRetry={fetchData}
+      />
     </div>
   );
 }
